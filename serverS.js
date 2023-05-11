@@ -28,61 +28,66 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const OPENAI_ORG_KEY = process.env.OPENAI_ORG_KEY;
 const ATLAS_URI = process.env.ATLAS_URI;
 const SESSION_KEY = process.env.SESSION_KEY;
+const monogdb_database = process.env.MONGODB_DATABASE;
+
 /* END secret section */
 
 
-// // Set up MongoDB
-// const uri = process.env.ATLAS_URI;
-// mongoose.connect(uri, { useNewUrlParser: true });
-// mongoose.connection.once("open", () => {
-//   console.log("Connected to MongoDB Atlas.");
-// });
 
-// var sessionStore = MongoStore.create({
-//   mongoUrl: uri,
-//   cypto: {
-//     secret: process.env.SESSION_KEY,
-//   },
-// });
 
-// // Set up sessions
-// app.use(
-//   session({
-//     secret: process.env.SESSION_KEY,
-//     store: sessionStore,
-//     saveUninitialized: false,
-//     resave: true,
-//     cookie: { maxAge: 60 * 60 * 1000 },
-//   })
-// );
 
-// // The '$ : {} ()' characters is used to get information from mongoDB, so it is not allowed. e.g. username: {$exists: true}}
-// const idSchema = Joi.string()
-//   .regex(/^[a-zA-Z0-9!@#%^&*_+=[\]\\|;'",.<>/?~`-]+$/)
-//   .required();
-// const emailSchema = Joi.string()
-//   .email({ minDomainSegments: 2 })
-//   .regex(/^[a-zA-Z0-9!@#%^&*_+=[\]\\|;'",.<>/?~`-]+$/)
-//   .required();
-// const passwordSchema = Joi.string()
-//   .regex(/^[a-zA-Z0-9!@#%^&*_+=[\]\\|;'",.<>/?~`-]+$/)
-//   .required();
+// Set up MongoDB
+const uri = process.env.ATLAS_URI;
+mongoose.connect(uri, { useNewUrlParser: true });
+mongoose.connection.once("open", () => {
+  console.log("Connected to MongoDB Atlas.");
+});
 
-// // Input Model
-// const inputSchema = new Schema({
-//   input: { type: String, required: true },
-// });
+var sessionStore = MongoStore.create({
+  mongoUrl: uri,
+  cypto: {
+    secret: process.env.SESSION_KEY,
+  },
+});
 
-// // User Model
-// const userSchema = new Schema({
-//   id: { type: String, required: true },
-//   email: { type: String, required: true },
-//   password: { type: String, required: true },
-// });
+// Set up sessions
+app.use(
+  session({
+    secret: process.env.SESSION_KEY,
+    store: sessionStore,
+    saveUninitialized: false,
+    resave: true,
+    cookie: { maxAge: 60 * 60 * 1000 },
+  })
+);
 
-// const User = mongoose.model("User", userSchema);
+// The '$ : {} ()' characters is used to get information from mongoDB, so it is not allowed. e.g. username: {$exists: true}}
+const idSchema = Joi.string()
+  .regex(/^[a-zA-Z0-9!@#%^&*_+=[\]\\|;'",.<>/?~`-]+$/)
+  .required();
+const emailSchema = Joi.string()
+  .email({ minDomainSegments: 2 })
+  .regex(/^[a-zA-Z0-9!@#%^&*_+=[\]\\|;'",.<>/?~`-]+$/)
+  .required();
+const passwordSchema = Joi.string()
+  .regex(/^[a-zA-Z0-9!@#%^&*_+=[\]\\|;'",.<>/?~`-]+$/)
+  .required();
 
-// InputTest = mongoose.model("InputTest", inputSchema);
+// Input Model
+const inputSchema = new Schema({
+  input: { type: String, required: true },
+});
+
+// User Model
+const userSchema = new Schema({
+  id: { type: String, required: true },
+  email: { type: String, required: true },
+  password: { type: String, required: true },
+});
+
+const User = mongoose.model("User", userSchema);
+
+InputTest = mongoose.model("InputTest", inputSchema);
 
 // Basic landing page
 app.get("/", (req, res) => {
@@ -299,11 +304,25 @@ app.get("/generateWorkoutRoutine", async (req, res) => {
   }
 });
 
+
+// set up exercise collection
+let exerciseCollection;
+mongoose
+  .connect(ATLAS_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => {
+    console.log("Connected to Database");
+    exerciseCollection = mongoose.connection.collection("NutriFit.exercise");
+  })
+  .catch((error) => console.error(error));
+
+
 // route to goto exercise catalog
 app.get("/exerciseCatalog", async (req, res) => {
-  res.render("exerciseCatalog");
-
+  // get all exercises from database
+  const exercises = await exerciseCollection.find({}).toArray();
+  res.render("exerciseCatalog", { exercises });
 });
+
 
 
 // Connect to port
